@@ -36,15 +36,32 @@ public class SimpleAnimationTransitions : MonoBehaviour {
                 simpleAnimationComponent.AddClip(clip, "A");
                 simpleAnimationComponent.AddClip(clip, "B");
                 simpleAnimationComponent.GetState("B").layer = 1;
+                simpleAnimationComponent.AddClip(clip, "C");
+                simpleAnimationComponent.GetState("C").layer = 1;
+                //simpleAnimationComponent.AddClip(clip, "D");
                 break;
             case AnimationType.StateMachine:
                 break;
             default:
                 break;
         }
-        
 
-        while(true)
+        switch (animationType)
+        {
+            case AnimationType.Legacy:
+                animationComponent.Play("A");
+                break;
+            case AnimationType.SimplePlayable:
+                //simpleAnimationComponent.Play("D");
+                break;
+            case AnimationType.StateMachine:
+                animatorComponent.Play("A");
+                break;
+            default:
+                break;
+        }
+
+        while (true)
         {
             switch (animationType)
             {
@@ -52,7 +69,7 @@ public class SimpleAnimationTransitions : MonoBehaviour {
                     animationComponent.Play("A");
                     break;
                 case AnimationType.SimplePlayable:
-                    simpleAnimationComponent.Play("A");
+                    simpleAnimationComponent.CrossFade("B", 0.5f);
                     break;
                 case AnimationType.StateMachine:
                     animatorComponent.Play("A");
@@ -68,7 +85,7 @@ public class SimpleAnimationTransitions : MonoBehaviour {
                     animationComponent.Play("B");
                     break;
                 case AnimationType.SimplePlayable:
-                    simpleAnimationComponent.Play("B");
+                    simpleAnimationComponent.CrossFade("C", 0.5f);
                     break;
                 case AnimationType.StateMachine:
                     animatorComponent.Play("B");

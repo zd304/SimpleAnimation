@@ -690,7 +690,10 @@ public partial class SimpleAnimationPlayable : PlayableBehaviour
                 AnimationMixerPlayable lastMixer = GetMixer(state.layerDirty);
                 if (!lastMixer.Equals(AnimationMixerPlayable.Null))
                 {
-                    graph.Disconnect(lastMixer, state.indexAtLayer);
+                    if (lastMixer.GetInput(state.indexAtLayer).Equals(state.playable))
+                    {
+                        graph.Disconnect(lastMixer, state.indexAtLayer);
+                    }
                 }
 
                 AnimationMixerPlayable mixer = AddMixerWhenNotExist(state.layer);

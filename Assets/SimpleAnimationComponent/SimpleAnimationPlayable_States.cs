@@ -458,7 +458,7 @@ public partial class SimpleAnimationPlayable : PlayableBehaviour
         public int layer
         {
             get { return m_Layer; }
-            set { m_LayerDirty = m_Layer; m_Layer = value; }
+            set { if (m_Layer == value) return; m_LayerDirty = m_Layer; m_Layer = value; }
         }
 
         int m_Layer;
