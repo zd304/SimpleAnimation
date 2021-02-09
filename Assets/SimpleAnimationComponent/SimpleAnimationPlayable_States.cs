@@ -578,14 +578,14 @@ public partial class SimpleAnimationPlayable : PlayableBehaviour
         }
 
         List<int> indicesAtLayer = new List<int>();
-        public int GetAvailableIndexAtLayer(int layer)
+        public int GetAvailableIndexAtLayer(int layer, StateInfo self)
         {
             indicesAtLayer.Clear();
 
             for (int i = 0; i < m_States.Count; ++i)
             {
                 StateInfo state = m_States[i];
-                if (state == null)
+                if (state == null || self == state)
                 {
                     continue;
                 }
@@ -631,7 +631,7 @@ public partial class SimpleAnimationPlayable : PlayableBehaviour
         {
             StateInfo state = new StateInfo();
 
-            state.indexAtLayer = GetAvailableIndexAtLayer(0);
+            state.indexAtLayer = GetAvailableIndexAtLayer(0, state);
 
             int firstAvailable = m_States.FindIndex(s => s == null);
             if (firstAvailable == -1)
@@ -645,6 +645,7 @@ public partial class SimpleAnimationPlayable : PlayableBehaviour
             }
 
             state.index = firstAvailable;
+
             m_Count++;
             return state;
         }

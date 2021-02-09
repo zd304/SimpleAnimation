@@ -182,7 +182,7 @@ public partial class SimpleAnimationPlayable : PlayableBehaviour
             int stateCountByLayer = m_States.GetCountByLayer(newState.layer);
             if (stateCountByLayer == mixer.GetInputCount())
             {
-                mixer.SetInputCount(stateCountByLayer + 1);
+                mixer.SetInputCount(stateCountByLayer);
             }
         }
 
@@ -646,6 +646,13 @@ public partial class SimpleAnimationPlayable : PlayableBehaviour
         {
             throw new Exception("Can not get mixer at layer:" + state.layer);
         }
+
+        int stateCountByLayer = m_States.GetCountByLayer(state.layer);
+        if (stateCountByLayer > mixer.GetInputCount())
+        {
+            mixer.SetInputCount(stateCountByLayer);
+        }
+
         mixer.DisconnectInput(state.indexAtLayer);
         graph.Connect(state.playable, 0, mixer, state.indexAtLayer);
     }
@@ -691,11 +698,13 @@ public partial class SimpleAnimationPlayable : PlayableBehaviour
                 {
                     throw new Exception("Can not get mixer at layer:" + state.layer);
                 }
+                
+                state.indexAtLayer = m_States.GetAvailableIndexAtLayer(state.layer, state);
 
                 int stateCountByLayer = m_States.GetCountByLayer(state.layer);
                 if (stateCountByLayer == mixer.GetInputCount())
                 {
-                    mixer.SetInputCount(stateCountByLayer + 1);
+                    mixer.SetInputCount(stateCountByLayer);
                 }
 
                 graph.Connect(state.playable, 0, mixer, state.indexAtLayer);
