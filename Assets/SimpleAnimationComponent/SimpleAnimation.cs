@@ -15,6 +15,7 @@ public partial class SimpleAnimation: MonoBehaviour
         float normalizedTime { get; set; }
         float speed { get; set; }
         string name { get; set; }
+        int layer { get; set; }
         float weight { get; set; }
         float length { get; }
         AnimationClip clip { get; }

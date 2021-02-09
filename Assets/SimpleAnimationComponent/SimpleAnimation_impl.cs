@@ -135,6 +135,13 @@ public partial class SimpleAnimation: MonoBehaviour, IAnimationClipSource
             get { return m_StateHandle.wrapMode; }
             set { Debug.LogError("Not Implemented"); }
         }
+
+        int State.layer
+        {
+            get { return m_StateHandle.layer; }
+            set { m_StateHandle.layer = value;
+                m_Component.Kick();}
+        }
     }
 
     [System.Serializable]

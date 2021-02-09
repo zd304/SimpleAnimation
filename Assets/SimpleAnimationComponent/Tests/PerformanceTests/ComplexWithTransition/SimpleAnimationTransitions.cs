@@ -35,6 +35,7 @@ public class SimpleAnimationTransitions : MonoBehaviour {
             case AnimationType.SimplePlayable:
                 simpleAnimationComponent.AddClip(clip, "A");
                 simpleAnimationComponent.AddClip(clip, "B");
+                simpleAnimationComponent.GetState("B").layer = 1;
                 break;
             case AnimationType.StateMachine:
                 break;

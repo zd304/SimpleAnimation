@@ -49,7 +49,10 @@ public partial class SimpleAnimationPlayable : PlayableBehaviour
     public Playable playable { get { return self; } }
     protected PlayableGraph graph { get { return self.GetGraph(); } }
 
-    AnimationMixerPlayable m_Mixer;
+    //AnimationMixerPlayable m_Mixer;
+
+    AnimationLayerMixerPlayable layerMixer;
+    List<AnimationMixerPlayable> mixers = new List<AnimationMixerPlayable>();
 
     public System.Action onDone = null;
     public SimpleAnimationPlayable()
@@ -58,24 +61,94 @@ public partial class SimpleAnimationPlayable : PlayableBehaviour
         this.m_StateQueue = new LinkedList<QueuedState>();
     }
 
-    public Playable GetInput(int index)
+    private AnimationMixerPlayable AddMixerWhenNotExist(int layer)
     {
-        if (index >= m_Mixer.GetInputCount())
+        AnimationMixerPlayable mixer;
+
+        if (layer < mixers.Count)
+        {
+            if (layer < 0)
+            {
+                return AnimationMixerPlayable.Null;
+            }
+            mixer = GetMixer(layer);
+            if (!mixer.Equals(AnimationMixerPlayable.Null))
+            {
+                return mixer;
+            }
+            mixer = AnimationMixerPlayable.Create(graph, 1);
+            mixers[layer] = mixer;
+            
+            graph.Connect(mixer, 0, layerMixer, layer);
+            layerMixer.SetInputWeight(layer, 1.0f);
+            return mixer;
+        }
+
+        AnimationMixerPlayable rst = AnimationMixerPlayable.Null;
+        int diff = layer + 1 - mixers.Count;
+        for (int i = 0; i < diff; ++i)
+        {
+            mixers.Add(AnimationMixerPlayable.Null);
+        }
+
+        mixer = AnimationMixerPlayable.Create(graph, 1);
+        mixers[layer] = mixer;
+        rst = mixer;
+
+        graph.Connect(mixer, 0, layerMixer, layer);
+        layerMixer.SetInputWeight(layer, 1.0f);
+
+        return rst;
+    }
+
+    private void ConnectToLayer(StateInfo state, int layer)
+    {
+        AnimationMixerPlayable mixer = AddMixerWhenNotExist(layer);
+        if (mixer.Equals(AnimationMixerPlayable.Null))
+        {
+            return;
+        }
+
+    }
+
+    private AnimationMixerPlayable GetMixer(int layer)
+    {
+        if (layer < 0 || layer >= mixers.Count)
+        {
+            return AnimationMixerPlayable.Null;
+        }
+        return mixers[layer];
+    }
+
+    public Playable GetInput(int layer, int index)
+    {
+        AnimationMixerPlayable mixer = GetMixer(layer);
+        if (mixer.Equals(AnimationMixerPlayable.Null))
+        {
+            return Playable.Null;
+        }
+        if (index >= mixer.GetInputCount())
             return Playable.Null;
 
-        return m_Mixer.GetInput(index);
+        return mixer.GetInput(index);
     }
 
     public override void OnPlayableCreate(Playable playable)
     {
         m_ActualPlayable = playable;
 
+        layerMixer = AnimationLayerMixerPlayable.Create(graph, 1);
+
         var mixer = AnimationMixerPlayable.Create(graph, 1, true);
-        m_Mixer = mixer;
+        mixers.Add(mixer);
+
+        layerMixer.SetInputCount(5);
+        layerMixer.SetInputWeight(0, 1.0f);
+        graph.Connect(mixer, 0, layerMixer, 0);
 
         self.SetInputCount(1);
         self.SetInputWeight(0, 1);
-        graph.Connect(m_Mixer, 0, self, 0);
+        graph.Connect(layerMixer, 0, self, 0);
     }
 
     public IEnumerable<IState> GetStates()
@@ -103,9 +176,14 @@ public partial class SimpleAnimationPlayable : PlayableBehaviour
         int index = newState.index;
 
         //Increase input count if needed
-        if (index == m_Mixer.GetInputCount())
+        AnimationMixerPlayable mixer = AddMixerWhenNotExist(newState.layer);
+        if (!mixer.Equals(AnimationMixerPlayable.Null))
         {
-            m_Mixer.SetInputCount(index + 1);
+            int stateCountByLayer = m_States.GetCountByLayer(newState.layer);
+            if (stateCountByLayer == mixer.GetInputCount())
+            {
+                mixer.SetInputCount(stateCountByLayer + 1);
+            }
         }
 
         var clipPlayable = AnimationClipPlayable.Create(graph, clip);
@@ -475,7 +553,13 @@ public partial class SimpleAnimationPlayable : PlayableBehaviour
 
             if (state.fadeSpeed == 0f && state.targetWeight == 0f)
             {
-                Playable input = m_Mixer.GetInput(state.index);
+                AnimationMixerPlayable mixer = GetMixer(state.layer);
+                if (mixer.Equals(AnimationMixerPlayable.Null))
+                {
+                    throw new Exception("Can not get mixer at layer:" + state.layer);
+                }
+
+                Playable input = mixer.GetInput(state.indexAtLayer);
                 if (!input.Equals(Playable.Null))
                 {
                     input.ResetTime(0f);
@@ -508,8 +592,14 @@ public partial class SimpleAnimationPlayable : PlayableBehaviour
 
             if (state.isReadyForCleanup)
             {
-                Playable toDestroy = m_Mixer.GetInput(state.index);
-                graph.Disconnect(m_Mixer, state.index);
+                AnimationMixerPlayable mixer = GetMixer(state.layer);
+                if (mixer.Equals(AnimationMixerPlayable.Null))
+                {
+                    throw new Exception("Can not get mixer at layer:" + state.layer);
+                }
+
+                Playable toDestroy = mixer.GetInput(state.indexAtLayer);
+                graph.Disconnect(mixer, state.indexAtLayer);
                 graph.DestroyPlayable(toDestroy);
                 m_States.RemoveState(i);
             }
@@ -518,17 +608,29 @@ public partial class SimpleAnimationPlayable : PlayableBehaviour
 
     private void DisconnectInput(int index)
     {
+        StateInfo state = m_States[index];
         if (keepStoppedPlayablesConnected)
         {
             m_States[index].Pause();
         }
-        graph.Disconnect(m_Mixer, index);
+        AnimationMixerPlayable mixer = GetMixer(state.layer);
+        if (mixer.Equals(AnimationMixerPlayable.Null))
+        {
+            throw new Exception("Can not get mixer at layer:" + state.layer);
+        }
+        graph.Disconnect(mixer, state.indexAtLayer);
     }
 
     private void ConnectInput(int index)
     {
         StateInfo state = m_States[index];
-        graph.Connect(state.playable, 0, m_Mixer, state.index);
+        AnimationMixerPlayable mixer = GetMixer(state.layer);
+        if (mixer.Equals(AnimationMixerPlayable.Null))
+        {
+            throw new Exception("Can not get mixer at layer:" + state.layer);
+        }
+        mixer.DisconnectInput(state.indexAtLayer);
+        graph.Connect(state.playable, 0, mixer, state.indexAtLayer);
     }
 
     private void UpdateStates(float deltaTime)
@@ -559,6 +661,31 @@ public partial class SimpleAnimationPlayable : PlayableBehaviour
                 }
             }
 
+            if (state.layerDirty >= 0)
+            {
+                AnimationMixerPlayable lastMixer = GetMixer(state.layerDirty);
+                if (!lastMixer.Equals(AnimationMixerPlayable.Null))
+                {
+                    graph.Disconnect(lastMixer, state.indexAtLayer);
+                }
+
+                AnimationMixerPlayable mixer = AddMixerWhenNotExist(state.layer);
+                if (mixer.Equals(AnimationMixerPlayable.Null))
+                {
+                    throw new Exception("Can not get mixer at layer:" + state.layer);
+                }
+
+                int stateCountByLayer = m_States.GetCountByLayer(state.layer);
+                if (stateCountByLayer == mixer.GetInputCount())
+                {
+                    mixer.SetInputCount(stateCountByLayer + 1);
+                }
+
+                graph.Connect(state.playable, 0, mixer, state.indexAtLayer);
+
+                layerMixer.SetLayerAdditive(1, true);
+            }
+
             if (state.enabledDirty)
             {
                 if (state.enabled)
@@ -568,7 +695,12 @@ public partial class SimpleAnimationPlayable : PlayableBehaviour
 
                 if (!keepStoppedPlayablesConnected)
                 {
-                    Playable input = m_Mixer.GetInput(i);
+                    AnimationMixerPlayable mixer = GetMixer(state.layer);
+                    if (mixer.Equals(AnimationMixerPlayable.Null))
+                    {
+                        throw new Exception("Can not get mixer at layer:" + state.layer);
+                    }
+                    Playable input = mixer.GetInput(state.indexAtLayer);
                     //if state is disabled but the corresponding input is connected, disconnect it
                     if (input.IsValid() && !state.enabled)
                     {
@@ -616,9 +748,14 @@ public partial class SimpleAnimationPlayable : PlayableBehaviour
                 StateInfo state = m_States[i];
                 if (state == null)
                     continue;
+                AnimationMixerPlayable mixer = GetMixer(state.layer);
+                if (mixer.Equals(AnimationMixerPlayable.Null))
+                {
+                    throw new Exception("Can not get mixer at layer:" + state.layer);
+                }
 
                 float weight = hasAnyWeight ? state.weight / totalWeight : 0.0f;
-                m_Mixer.SetInputWeight(state.index, weight);
+                mixer.SetInputWeight(state.indexAtLayer, weight);
             }
         }
     }

@@ -97,6 +97,8 @@ public partial class SimpleAnimationPlayable : PlayableBehaviour
 
         string name { get; set; }
 
+        int layer { get; set; }
+
         float weight { get; set; }
 
         float length { get; }
@@ -236,6 +238,25 @@ public partial class SimpleAnimationPlayable : PlayableBehaviour
             }
         }
 
+        public int layer
+        {
+            get
+            {
+                if (!IsValid())
+                    throw new System.InvalidOperationException("This StateHandle is not valid");
+                return m_Parent.m_States[m_Index].layer;
+            }
+            set
+            {
+                if (!IsValid())
+                    throw new System.InvalidOperationException("This StateHandle is not valid");
+                if (value < 0)
+                    throw new System.ArgumentException("Layer cannot be negative");
+
+                m_Parent.m_States.SetStateLayer(m_Index, value);
+            }
+        }
+
         public float length
         {
             get
@@ -319,12 +340,12 @@ public partial class SimpleAnimationPlayable : PlayableBehaviour
 
         public void Pause()
         {
-            m_Playable.SetPlayState(PlayState.Paused);
+            m_Playable.Pause();
         }
 
         public void Play()
         {
-            m_Playable.SetPlayState(PlayState.Playing);
+            m_Playable.Play();
         }
 
         public void Stop()
@@ -394,6 +415,14 @@ public partial class SimpleAnimationPlayable : PlayableBehaviour
 
         private int m_Index;
 
+        public int indexAtLayer
+        {
+            get { return m_IndexAtLayer; }
+            set { m_IndexAtLayer = value; }
+        }
+
+        private int m_IndexAtLayer;
+
         public string stateName
         {
             get { return m_StateName; }
@@ -425,6 +454,14 @@ public partial class SimpleAnimationPlayable : PlayableBehaviour
         }
 
         float m_Weight;
+
+        public int layer
+        {
+            get { return m_Layer; }
+            set { m_LayerDirty = m_Layer; m_Layer = value; }
+        }
+
+        int m_Layer;
 
         public float fadeSpeed
         {
@@ -497,14 +534,18 @@ public partial class SimpleAnimationPlayable : PlayableBehaviour
         public bool enabledDirty { get { return m_EnabledDirty; } }
         public bool weightDirty { get { return m_WeightDirty; } }
 
+        public int layerDirty { get { return m_LayerDirty; } }
+
         public void ResetDirtyFlags()
         { 
             m_EnabledDirty = false;
             m_WeightDirty = false;
+            m_LayerDirty = -1;
         }
 
         private bool m_WeightDirty;
         private bool m_EnabledDirty;
+        private int m_LayerDirty = -1;
 
         public void InvalidateTime() { m_TimeIsUpToDate = false; }
         private bool m_TimeIsUpToDate;
@@ -536,9 +577,61 @@ public partial class SimpleAnimationPlayable : PlayableBehaviour
             m_States = new List<StateInfo>();
         }
 
+        List<int> indicesAtLayer = new List<int>();
+        public int GetAvailableIndexAtLayer(int layer)
+        {
+            indicesAtLayer.Clear();
+
+            for (int i = 0; i < m_States.Count; ++i)
+            {
+                StateInfo state = m_States[i];
+                if (state == null)
+                {
+                    continue;
+                }
+                if (state.layer == layer)
+                {
+                    FillIndicesAtLayer(state);
+                }
+            }
+
+            int availableIndex = -1;
+            for (int i = 0; i < indicesAtLayer.Count; ++i)
+            {
+                if (indicesAtLayer[i] < 0)
+                {
+                    availableIndex = i;
+                    break;
+                }
+            }
+            availableIndex = indicesAtLayer.Count;
+            indicesAtLayer.Clear();
+            return availableIndex;
+        }
+
+        // 可以用时间换空间的方式来优化
+        private void FillIndicesAtLayer(StateInfo state)
+        {
+            if (indicesAtLayer.Count <= state.indexAtLayer)
+            {
+                int diff = state.indexAtLayer + 1 - indicesAtLayer.Count;
+                for (int j = 0; j < diff; ++j)
+                {
+                    indicesAtLayer.Add(-1);
+                }
+                indicesAtLayer[state.indexAtLayer] = state.index;
+            }
+            else
+            {
+                indicesAtLayer[state.indexAtLayer] = state.index;
+            }
+        }
+
         public StateInfo InsertState()
         {
             StateInfo state = new StateInfo();
+
+            state.indexAtLayer = GetAvailableIndexAtLayer(0);
 
             int firstAvailable = m_States.FindIndex(s => s == null);
             if (firstAvailable == -1)
@@ -566,6 +659,33 @@ public partial class SimpleAnimationPlayable : PlayableBehaviour
             m_States[index] = null;
             removed.DestroyPlayable();
             m_Count = m_States.Count;
+        }
+
+        public int GetCountByLayer(int layer)
+        {
+            int count = 0;
+            for (int i = 0; i < m_States.Count; i++)
+            {
+                StateInfo state = m_States[i];
+                if (state.layer == layer)
+                {
+                    ++count;
+                }
+            }
+            return count;
+        }
+
+        public int GetLayer(Playable playable)
+        {
+            for (int i = 0; i < m_States.Count; i++)
+            {
+                StateInfo state = m_States[i];
+                if (state.playable.Equals(playable))
+                {
+                    return state.layer;
+                }
+            }
+            return -1;
         }
 
         public bool RemoveClip(AnimationClip clip)
@@ -653,6 +773,15 @@ public partial class SimpleAnimationPlayable : PlayableBehaviour
                 return Mathf.Infinity;
 
             return clip.length / speed;
+        }
+
+        public int GetStateLayer(int index)
+        {
+            return m_States[index].layer;
+        }
+        public void SetStateLayer(int index, int value)
+        {
+            m_States[index].layer = value;
         }
 
         public float GetClipLength(int index)
