@@ -60,7 +60,7 @@ public class SimpleAnimationTransitions : MonoBehaviour {
                 default:
                     break;
             }
-            yield return new WaitForSeconds(0.5f);
+            yield return new WaitForSeconds(2.0f);
 
             switch (animationType)
             {
@@ -76,7 +76,7 @@ public class SimpleAnimationTransitions : MonoBehaviour {
                 default:
                     break;
             }
-            yield return new WaitForSeconds(0.5f);
+            yield return new WaitForSeconds(2.0f);
         }
 	}
 

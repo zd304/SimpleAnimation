@@ -253,11 +253,28 @@ public partial class SimpleAnimationPlayable : PlayableBehaviour
 
     private bool Play(int index)
     {
+        int layer = -1;
         for (int i = 0; i < m_States.Count; i++)
         {
             StateInfo state = m_States[i];
             if (state.index == index)
             {
+                layer = state.layer;
+                break;
+            }
+        }
+
+        for (int i = 0; i < m_States.Count; i++)
+        {
+            StateInfo state = m_States[i];
+            if (state.layer != layer)
+            {
+                continue;
+            }
+            if (state.index == index)
+            {
+                state.Disable();
+                state.SetTime(0.0f);
                 state.Enable();
                 state.ForceWeight(1.0f);
             }
@@ -682,8 +699,6 @@ public partial class SimpleAnimationPlayable : PlayableBehaviour
                 }
 
                 graph.Connect(state.playable, 0, mixer, state.indexAtLayer);
-
-                layerMixer.SetLayerAdditive(1, true);
             }
 
             if (state.enabledDirty)
