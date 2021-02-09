@@ -455,10 +455,17 @@ public partial class SimpleAnimationPlayable : PlayableBehaviour
 
     private bool Crossfade(int index, float time)
     {
+        StateInfo curState = m_States[index];
+        if (curState == null)
+        {
+            return false;
+        }
+        int layer = curState.layer;
+
         for (int i = 0; i < m_States.Count; i++)
         {
             StateInfo state = m_States[i];
-            if (state == null)
+            if (state == null || state.layer != layer)
                 continue;
 
             if (state.index == index)

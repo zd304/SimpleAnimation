@@ -65,14 +65,8 @@ public class SimpleAnimationTransitions : MonoBehaviour {
         {
             switch (animationType)
             {
-                case AnimationType.Legacy:
-                    animationComponent.Play("A");
-                    break;
                 case AnimationType.SimplePlayable:
                     simpleAnimationComponent.CrossFade("B", 0.5f);
-                    break;
-                case AnimationType.StateMachine:
-                    animatorComponent.Play("A");
                     break;
                 default:
                     break;
@@ -81,14 +75,28 @@ public class SimpleAnimationTransitions : MonoBehaviour {
 
             switch (animationType)
             {
-                case AnimationType.Legacy:
-                    animationComponent.Play("B");
-                    break;
                 case AnimationType.SimplePlayable:
                     simpleAnimationComponent.CrossFade("C", 0.5f);
                     break;
-                case AnimationType.StateMachine:
-                    animatorComponent.Play("B");
+                default:
+                    break;
+            }
+            yield return new WaitForSeconds(2.0f);
+
+            switch (animationType)
+            {
+                case AnimationType.SimplePlayable:
+                    simpleAnimationComponent.Play("A");
+                    break;
+                default:
+                    break;
+            }
+            yield return new WaitForSeconds(2.0f);
+
+            switch (animationType)
+            {
+                case AnimationType.SimplePlayable:
+                    simpleAnimationComponent.Play("D");
                     break;
                 default:
                     break;
