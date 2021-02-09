@@ -61,6 +61,8 @@ public class SimpleAnimationTransitions : MonoBehaviour {
                 break;
         }
 
+        int t = 0;
+
         while (true)
         {
             switch (animationType)
@@ -82,7 +84,7 @@ public class SimpleAnimationTransitions : MonoBehaviour {
                     break;
             }
             yield return new WaitForSeconds(2.0f);
-
+            
             switch (animationType)
             {
                 case AnimationType.SimplePlayable:
@@ -97,6 +99,16 @@ public class SimpleAnimationTransitions : MonoBehaviour {
             {
                 case AnimationType.SimplePlayable:
                     simpleAnimationComponent.Play("D");
+                    break;
+                default:
+                    break;
+            }
+            yield return new WaitForSeconds(2.0f);
+
+            switch (animationType)
+            {
+                case AnimationType.SimplePlayable:
+                    simpleAnimationComponent.Stop("C");
                     break;
                 default:
                     break;

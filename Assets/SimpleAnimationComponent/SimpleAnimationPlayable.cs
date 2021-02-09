@@ -796,7 +796,7 @@ public partial class SimpleAnimationPlayable : PlayableBehaviour
                 for (int i = 0; i < m_States.Count; i++)
                 {
                     StateInfo state = m_States[i];
-                    if (state == null)
+                    if (state == null || state.layer != e.Current.Key)
                         continue;
                     AnimationMixerPlayable mixer = GetMixer(state.layer);
                     if (mixer.Equals(AnimationMixerPlayable.Null))
