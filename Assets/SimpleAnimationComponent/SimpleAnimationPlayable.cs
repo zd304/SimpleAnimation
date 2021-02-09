@@ -702,7 +702,7 @@ public partial class SimpleAnimationPlayable : PlayableBehaviour
                 state.indexAtLayer = m_States.GetAvailableIndexAtLayer(state.layer, state);
 
                 int stateCountByLayer = m_States.GetCountByLayer(state.layer);
-                if (stateCountByLayer == mixer.GetInputCount())
+                if (stateCountByLayer > mixer.GetInputCount())
                 {
                     mixer.SetInputCount(stateCountByLayer);
                 }
