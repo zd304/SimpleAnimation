@@ -656,11 +656,14 @@ public partial class SimpleAnimationPlayable : PlayableBehaviour
         mixer.DisconnectInput(state.indexAtLayer);
         graph.Connect(state.playable, 0, mixer, state.indexAtLayer);
     }
-
+    
+    static Dictionary<int, float> totalWeights = new Dictionary<int, float>();
+    static Dictionary<int, bool> mustUpdateWeights = new Dictionary<int, bool>();
     private void UpdateStates(float deltaTime)
     {
-        bool mustUpdateWeights = false;
-        float totalWeight = 0f;
+        mustUpdateWeights.Clear();
+        totalWeights.Clear();
+
         for (int i = 0; i < m_States.Count; i++)
         {
             StateInfo state = m_States[i];
@@ -759,32 +762,49 @@ public partial class SimpleAnimationPlayable : PlayableBehaviour
                 }
             }
 
-            totalWeight += state.weight;
+            if (!totalWeights.ContainsKey(state.layer))
+            {
+                totalWeights.Add(state.layer, 0.0f);
+            }
+            if (!mustUpdateWeights.ContainsKey(state.layer))
+            {
+                mustUpdateWeights.Add(state.layer, false);
+            }
+            totalWeights[state.layer] += state.weight;
             if (state.weightDirty)
             {
-                mustUpdateWeights = true;
+                mustUpdateWeights[state.layer] = true;
             }
             state.ResetDirtyFlags();
         }
 
-        if (mustUpdateWeights)
+        var e = mustUpdateWeights.GetEnumerator();
+        while (e.MoveNext())
         {
-            bool hasAnyWeight = totalWeight > 0.0f;
-            for (int i = 0; i < m_States.Count; i++)
+            if (e.Current.Value)
             {
-                StateInfo state = m_States[i];
-                if (state == null)
-                    continue;
-                AnimationMixerPlayable mixer = GetMixer(state.layer);
-                if (mixer.Equals(AnimationMixerPlayable.Null))
-                {
-                    throw new Exception("Can not get mixer at layer:" + state.layer);
-                }
+                float totalWeight = totalWeights[e.Current.Key];
 
-                float weight = hasAnyWeight ? state.weight / totalWeight : 0.0f;
-                mixer.SetInputWeight(state.indexAtLayer, weight);
+                bool hasAnyWeight = totalWeight > 0.0f;
+                for (int i = 0; i < m_States.Count; i++)
+                {
+                    StateInfo state = m_States[i];
+                    if (state == null)
+                        continue;
+                    AnimationMixerPlayable mixer = GetMixer(state.layer);
+                    if (mixer.Equals(AnimationMixerPlayable.Null))
+                    {
+                        throw new Exception("Can not get mixer at layer:" + state.layer);
+                    }
+
+                    float weight = hasAnyWeight ? state.weight / totalWeight : 0.0f;
+                    mixer.SetInputWeight(state.indexAtLayer, weight);
+                }
             }
         }
+
+        mustUpdateWeights.Clear();
+        totalWeights.Clear();
     }
 
     private float CalculateQueueTimes()

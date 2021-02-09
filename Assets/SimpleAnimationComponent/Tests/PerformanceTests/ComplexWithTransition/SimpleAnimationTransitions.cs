@@ -38,7 +38,7 @@ public class SimpleAnimationTransitions : MonoBehaviour {
                 simpleAnimationComponent.GetState("B").layer = 1;
                 simpleAnimationComponent.AddClip(clip, "C");
                 simpleAnimationComponent.GetState("C").layer = 1;
-                //simpleAnimationComponent.AddClip(clip, "D");
+                simpleAnimationComponent.AddClip(clip, "D");
                 break;
             case AnimationType.StateMachine:
                 break;
@@ -52,7 +52,7 @@ public class SimpleAnimationTransitions : MonoBehaviour {
                 animationComponent.Play("A");
                 break;
             case AnimationType.SimplePlayable:
-                //simpleAnimationComponent.Play("D");
+                simpleAnimationComponent.Play("D");
                 break;
             case AnimationType.StateMachine:
                 animatorComponent.Play("A");
