@@ -604,7 +604,10 @@ public partial class SimpleAnimationPlayable : PlayableBehaviour
                     break;
                 }
             }
-            availableIndex = indicesAtLayer.Count;
+            if (availableIndex < 0)
+            {
+                availableIndex = indicesAtLayer.Count;
+            }
             indicesAtLayer.Clear();
             return availableIndex;
         }
